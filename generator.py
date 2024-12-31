@@ -97,6 +97,12 @@ def send_data(data):
             data), headers={"Content-Type": "application/json"})
         if response.status_code != 200:
             print(f"Failed to send data: {data}. Response: {response.text}")
+        else:
+            response_dict = response.json()
+            # print("received response from the ingestion service:",response)
+            print("\n\n")
+            print(f"received response from the ingestion service: ", response_dict.get("data"), "\n", "message: ",response_dict.get("message"))
+            
     except Exception as e:
         print(f"Error occurred: {e}")
 
