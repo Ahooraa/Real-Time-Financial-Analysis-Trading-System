@@ -1,7 +1,7 @@
 from kafka import KafkaProducer
 import json
 import logging
-
+logging.basicConfig(level=logging.INFO)
 # Kafka configuration
 KAFKA_BROKER = "kafka:9092"
 TOPIC_NAME = "stock_data"

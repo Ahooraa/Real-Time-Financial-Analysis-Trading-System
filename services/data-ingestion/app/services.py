@@ -1,5 +1,6 @@
 from app.kafka_producer import send_to_kafka
 import logging
+logging.basicConfig(level=logging.INFO)
 
 def process_data(data):
     # Validate required fields
