@@ -4,7 +4,6 @@ import logging
 logging.basicConfig(level=logging.INFO)
 # Kafka configuration
 KAFKA_BROKER = "kafka:9092"
-TOPIC_NAME = "stock_data"
 
 # Initialize Kafka producer
 producer = KafkaProducer(
@@ -12,12 +11,12 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
-def send_to_kafka(data):
+def send_to_kafka(data, topic):
     try:
         # Send data to Kafka topic
-        producer.send(TOPIC_NAME, value=data)
+        producer.send(topic, value=data)
         producer.flush()
-        logging.info(f"Data sent to Kafka topic {TOPIC_NAME}: {data}")
+        logging.info(f"Data sent to Kafka topic {topic}: {data}")
         return True
     except Exception as e:
         logging.error(f"Failed to send data to Kafka: {e}")
