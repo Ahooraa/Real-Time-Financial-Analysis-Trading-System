@@ -21,6 +21,12 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    command:
+      - sh
+      - -c
+      - |
+        # Start Kafka
+        /etc/confluent/docker/run
 
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
@@ -35,6 +41,24 @@ services:
       SCHEMA_REGISTRY_LISTENERS: "http://schema-registry:8081"
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://kafka-broker:9092"
 
+  kafka-init:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - kafka
+      - schema-registry
+    entrypoint:
+      - sh
+      - -c
+      - |
+        # Wait for Kafka broker to start
+        while ! nc -z kafka-broker 9092; do
+          sleep 1;
+        done;
+        # Delete the stock_prices topic if it exists
+        kafka-topics --delete --topic stock_prices --bootstrap-server kafka-broker:9092 || true;
+        # Create the stock_prices topic with 5 partitions
+        kafka-topics --create --topic stock_prices --bootstrap-server kafka-broker:9092 --partitions 5 --replication-factor 1 || true;
+
   data-ingestion:
     build:
       context: ./services/data-ingestion
@@ -42,6 +66,7 @@ services:
     container_name: data-ingestion
     depends_on:
       - kafka
+      - kafka-init
     environment:
       FLASK_HOST: "0.0.0.0"
       FLASK_PORT: 5000

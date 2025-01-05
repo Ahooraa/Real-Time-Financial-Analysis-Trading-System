@@ -22,7 +22,8 @@ def process_data(data):
 
     # Forward to Kafka
     logging.info("received message from the generator: %s", data)
-    kafka_result = send_to_kafka(data, topic)
+    stock_symbol = data.get("stock_symbol", "")
+    kafka_result = send_to_kafka(data, topic, key=stock_symbol)
     if not kafka_result:
         return {"error": "Failed to send data to Kafka"}
 
