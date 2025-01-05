@@ -29,6 +29,8 @@ services:
       - sh
       - -c
       - |
+        # Make the init script executable
+        chmod +x /init-kafka.sh
         # Start Kafka
         /etc/confluent/docker/run & 
         KAFKA_PID=$!
