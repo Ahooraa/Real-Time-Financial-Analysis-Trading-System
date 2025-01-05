@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -23,24 +21,20 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    volumes:
-      - ./init-kafka.sh:/init-kafka.sh
     command:
       - sh
       - -c
       - |
-        # Make the init script executable
-        chmod +x /init-kafka.sh
-        # Start Kafka
-        /etc/confluent/docker/run & 
-        KAFKA_PID=$!
-        # Wait for Kafka to be ready
-        while ! nc -z localhost 9092; do
+        /etc/confluent/docker/run &
+        while ! nc -z kafka-broker 9092; do
           sleep 1;
         done;
-        # Run the initialization script
-        /init-kafka.sh
-        wait $KAFKA_PID
+        kafka-topics --create --topic stock_prices --partitions 5 --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
+        kafka-topics --create --topic order_book --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
+        kafka-topics --create --topic news_sentiment --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
+        kafka-topics --create --topic market_data --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
+        kafka-topics --create --topic economic_indicator --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
+        wait
 
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
