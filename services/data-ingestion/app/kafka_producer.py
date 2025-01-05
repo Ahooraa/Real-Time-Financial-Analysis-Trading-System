@@ -1,89 +1,101 @@
-from kafka import KafkaProducer
+#!/usr/bin/env python3
+
 import json
 import logging
-import mmh3  # MurmurHash3 for consistent hashing
+import mmh3
+from kafka import KafkaProducer
 
 logging.basicConfig(level=logging.INFO)
 
-# Kafka configuration
-KAFKA_BROKER = "kafka:9092"
-
-############################
-# 1. Partition Map
-############################
-# For the "stock_data" topic, you want each known symbol to have a dedicated partition.
-# Example mapping:
-#   TSLA -> partition 1
-#   GOOGL -> partition 2
-#   MSFT -> partition 3
-#   AMZN -> partition 4
-#   ...
-# If the symbol is not in this map, we do standard hashing.
-
+##################################
+# 1. Partition Maps and Classes
+##################################
 partition_map = {
     "AMZN": 0,
     "TSLA": 1,
     "AAPL": 2,
     "GOOGL": 3,
     "MSFT": 4,
-    # etc...
+    # ...
 }
 
-############################
-# 2. Custom Partitioner
-############################
-def custom_partitioner(key_bytes, all_partitions, available_partitions):
+class StockPricesPartitioner:
     """
-    If key_bytes corresponds to a known stock symbol, we force a specific partition.
-    Otherwise, we do hash-based partitioning for consistency.
+    Custom partitioner for the 'stock_prices' topic. Forces known stock symbols
+    to a specific partition. Otherwise, fallback to hash-based partitioning.
     """
-    # Safety check: if no key is provided, do a fallback
-    if not key_bytes:
-        # Just default to partition 0 or do a random/hashing fallback
-        logging.info("No key provided. Using partition 0.")
+    def __call__(self, key_bytes, all_partitions, available_partitions):
+        if not key_bytes:
+            logging.info("[StockPricesPartitioner] No key -> partition=0 by default")
+            return 0
+
+        symbol = key_bytes.decode('utf-8')
+        if symbol in partition_map:
+            forced_partition = partition_map[symbol]
+            logging.info(f"[StockPricesPartitioner] Forcing symbol={symbol} to partition={forced_partition}")
+            return forced_partition
+
+        # fallback: hash-based
+        key_hash = mmh3.hash(key_bytes)
+        partition = key_hash % len(all_partitions)
+        logging.info(f"[StockPricesPartitioner] Hashing symbol={symbol} -> partition={partition}")
+        return partition
+
+
+class SinglePartitionPartitioner:
+    """
+    Simple partitioner that always returns partition=0
+    (or you could do random, or just use default partitioner).
+    """
+    def __call__(self, key_bytes, all_partitions, available_partitions):
+        logging.info("[SinglePartitionPartitioner] Using partition=0")
         return 0
 
-    stock_symbol = key_bytes.decode('utf-8')  # Convert bytes to string
-    if stock_symbol in partition_map:
-        forced_partition = partition_map[stock_symbol]
-        logging.info(f"[Partitioner] Forcing symbol={stock_symbol} to partition={forced_partition}")
-        return forced_partition
+##################################
+# 2. Create Two Producers
+##################################
+KAFKA_BROKER = "kafka:9092"
 
-    # Otherwise, do normal hash-based partitioning
-    key_hash = mmh3.hash(key_bytes)
-    partition = key_hash % len(all_partitions)
-    logging.info(f"[Partitioner] symbol={stock_symbol} hashed to partition={partition}")
-    return partition
-
-############################
-# 3. Kafka Producer
-############################
-# We set the 'partitioner' argument to use our custom function
-producer = KafkaProducer(
+# Producer for 'stock_prices' (multi-partition, one partition per known symbol)
+stock_prices_producer = KafkaProducer(
     bootstrap_servers=KAFKA_BROKER,
-    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
     key_serializer=lambda k: k.encode('utf-8'),
-    partitioner=custom_partitioner
+    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+    partitioner=StockPricesPartitioner()
 )
 
-############################
-# 4. Send Function
-############################
+# Producer for all other topics (always partition=0, or you can use default)
+other_producer = KafkaProducer(
+    bootstrap_servers=KAFKA_BROKER,
+    key_serializer=lambda k: k.encode('utf-8'),
+    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+    partitioner=SinglePartitionPartitioner()
+)
+
+##################################
+# 3. Send Function
+##################################
 def send_to_kafka(data, topic, key=None):
     """
-    Sends data to the given topic. 
-    - 'key' is your stock symbol (or another string).
-    - If 'key' matches one in partition_map, we force its partition.
+    Sends 'data' to the specified 'topic' using either:
+    - 'stock_prices_producer' if topic == "stock_prices"
+    - 'other_producer' otherwise
+
+    :param data: The message payload (dict or any Python object).
+    :param topic: The Kafka topic string, e.g. "stock_prices"
+    :param key: The key string (e.g. stock symbol).
     """
     try:
-        # The key controls the partition assignment
-        future = producer.send(topic, key=key, value=data)
-        record_metadata = future.get(timeout=10)
+        if topic == "stock_prices":
+            future = stock_prices_producer.send(topic, key=key, value=data)
+        else:
+            future = other_producer.send(topic, key=key, value=data)
+
+        record_metadata = future.get(timeout=30)
         logging.info(
             f"Data sent to topic={topic}, partition={record_metadata.partition}, "
             f"offset={record_metadata.offset}, data={data}"
         )
-        producer.flush()
         return True
     except Exception as e:
         logging.error(f"Failed to send data to Kafka: {e}")
