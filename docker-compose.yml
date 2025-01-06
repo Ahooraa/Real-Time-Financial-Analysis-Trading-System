@@ -29,11 +29,12 @@ services:
         while ! nc -z kafka-broker 9092; do
           sleep 1;
         done;
-        kafka-topics --create --topic stock_prices --partitions 5 --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
-        kafka-topics --create --topic order_book --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
-        kafka-topics --create --topic news_sentiment --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
-        kafka-topics --create --topic market_data --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
-        kafka-topics --create --topic economic_indicator --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
+        kafka-topics --delete --topic btcirt_topic --bootstrap-server kafka-broker:9092 || true;
+        kafka-topics --create --topic btcirt_topic --partitions 1 --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
+        kafka-topics --create --topic usdtirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
+        kafka-topics --create --topic ethirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
+        kafka-topics --create --topic etcirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
+        kafka-topics --create --topic shibirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
         wait
 
   schema-registry:
