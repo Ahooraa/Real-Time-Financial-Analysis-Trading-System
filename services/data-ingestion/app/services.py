@@ -18,7 +18,7 @@ def process_data(data):
             return {"error": "Failed to send data to Kafka"}
 
         return {"status": "success", "message": f"Data processed and forwarded to Kafka topic:{topic}", "data": data}
-    
+
     except Exception as e:
         logging.error("Exception occurred while processing data: %s", str(e))
         return {"error": "Exception occurred while processing data", "details": str(e)}
