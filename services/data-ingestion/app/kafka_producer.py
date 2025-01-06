@@ -13,6 +13,7 @@ KAFKA_BROKER = "kafka:9092"
 
 # Producer for all topics
 producer = KafkaProducer(
+    api_version=(0, 10, 2),
     bootstrap_servers=KAFKA_BROKER,
     key_serializer=lambda k: k.encode('utf-8'),
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
