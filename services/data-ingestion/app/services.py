@@ -1,5 +1,7 @@
 from app.kafka_producer import send_to_kafka
 import logging
+import datetime
+from zoneinfo import ZoneInfo
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,6 +25,9 @@ def process_data(data):
     # Forward to Kafka
     logging.info("received message from the generator: %s", data)
     stock_symbol = data.get("stock_symbol", "")
+    dt_local = datetime.datetime.fromtimestamp(data.get("timestamp", 0), tz=ZoneInfo("Asia/Tehran"))
+    data["local_time"] = dt_local.strftime('%Y-%m-%d %H:%M:%S')
+
     kafka_result = send_to_kafka(data, topic, key=stock_symbol)
     if not kafka_result:
         return {"error": "Failed to send data to Kafka"}
