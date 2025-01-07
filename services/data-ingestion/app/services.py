@@ -1,6 +1,5 @@
 from app.kafka_producer import send_to_kafka
 import logging
-import datetime
 from zoneinfo import ZoneInfo
 
 logging.basicConfig(level=logging.INFO)

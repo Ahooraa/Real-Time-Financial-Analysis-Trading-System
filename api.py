@@ -42,19 +42,18 @@ try:
                     high_prices = data["h"]
                     low_prices = data["l"]
                     close_prices = data["c"]
-                    volumes = data["v"]
-
+                    volumes= data['v']
                     # Prepare the latest data point for ingestion
                     latest_index = -1  # Last element
                     payload = {
                         "stock_symbol": symbol,
-                        "timestamp": timestamps,
+                        # "timestamp": timestamps,
                         "local_time":format_timestamp(timestamps[latest_index]),
                         "open": open_prices[latest_index],
                         "high": high_prices[latest_index],
                         "low": low_prices[latest_index],
                         "close": close_prices[latest_index],
-                        "volume": volumes[latest_index],
+                        "volume": volumes[latest_index]
                     }
 
                     # Send the data to the Flask app for ingestion
@@ -64,6 +63,10 @@ try:
                         print(flask_response_json.get("message"),"\n", f"data: {flask_response_json.get('data')}\n\n")
                     else:
                         print(f"Failed to send data to Flask app: {flask_response.status_code}")
+                elif data.get("s") == "error":
+                    print(f"API Error: {data.get('errmsg')}")
+                elif(data.get("s") == "no_data"):
+                    print("No new data in the period betwen from and to.")
 
                 else:
                     print("No new data available or API returned an error.")
