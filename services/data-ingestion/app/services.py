@@ -12,6 +12,7 @@ def process_data(data):
 
         # Forward to Kafka
         logging.info("received message from the API: %s", data)
+        data["topic"]= topic
         kafka_result = send_to_kafka(data, topic, key=stock_symbol)
         if not kafka_result:
             return {"error": "Failed to send data to Kafka"}
