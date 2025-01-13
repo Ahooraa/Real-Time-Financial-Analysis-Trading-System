@@ -74,46 +74,16 @@ services:
       - kafka
     environment:
       KAFKA_BROKER: "kafka-broker:9092"
-    command: python /app/consumer.py
+    command: spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 /app/consumer.py
 
   questdb:
     image: questdb/questdb:latest
     container_name: questdb
-    # QuestDB default ports:
-    # - 9000 (HTTP Web Console)
-    # - 8812 (Postgres wire)
-    # - 9009 (ILP)
     ports:
       - "9000:9000"
       - "8812:8812"
     volumes:
       - questdb-volume:/root/.questdb
-
-  # aggregator:
-  #   build:
-  #     context: ./aggregator
-  #     dockerfile: Dockerfile
-  #   container_name: aggregator
-  #   depends_on:
-  #     - kafka
-  #     - questdb
-  #   environment:
-  #     # Kafka connection settings
-  #     KAFKA_BOOTSTRAP_SERVERS: "kafka-broker:9092"
-  #     KAFKA_TOPIC: "stock_data"          # change this
-
-  #     # QuestDB connection settings (Postgres wire)
-  #     QUESTDB_HOST: "questdb"
-  #     QUESTDB_PORT: "8812"
-  #     QUESTDB_DB: "qdb"
-  #     QUESTDB_USER: "admin"
-  #     QUESTDB_PASSWORD: "quest"
-    # If you want to see aggregator logs easily in console:
-    # logging:
-    #   driver: "json-file"
-    #   options:
-    #     max-size: "10m"
-    #     max-file: "3"
 
 volumes:
   zookeeper_data:
