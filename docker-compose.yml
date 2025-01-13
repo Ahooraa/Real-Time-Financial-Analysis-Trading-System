@@ -20,6 +20,7 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     command:
       - sh
@@ -63,3 +64,19 @@ services:
       KAFKA_TOPIC: "stock_data"
     ports:
       - "5000:5000"
+
+  stream-processing:
+    build:
+      context: ./services/stream-processing
+      dockerfile: Dockerfile
+    container_name: stream-processing
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKER: "kafka-broker:9092"
+    command: python /app/consumer.py
+
+volumes:
+  zookeeper_data:
+  kafka_data:
+  schema_registry_data:

@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 ##################################
 # 1. Create Kafka Producers
 ##################################
-KAFKA_BROKER = "kafka:9092"
+KAFKA_BROKER = "kafka-broker:9092"
 
 # Producer for all topics
 producer = KafkaProducer(
