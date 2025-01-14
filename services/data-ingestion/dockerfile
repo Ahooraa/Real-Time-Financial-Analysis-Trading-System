@@ -18,4 +18,4 @@ RUN chmod +x /wait-for-it.sh
 EXPOSE 5000
 
 # Run the application with wait-for-it
-CMD ["/wait-for-it.sh", "kafka-broker:9092", "--", "python", "wsgi.py"]
+CMD ["/wait-for-it.sh", "kafka-broker:9092", "--", "python", "./app/ingest.py"]

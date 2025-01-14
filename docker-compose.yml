@@ -19,7 +19,8 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092,PLAINTEXT://${HOST_MACHINE_IP}:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     command:
       - sh
@@ -29,11 +30,11 @@ services:
         while ! nc -z kafka-broker 9092; do
           sleep 1;
         done;
-        kafka-topics --create --topic stock_prices --partitions 5 --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
-        kafka-topics --create --topic order_book --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
-        kafka-topics --create --topic news_sentiment --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
-        kafka-topics --create --topic market_data --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
-        kafka-topics --create --topic economic_indicator --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092
+        kafka-topics --create --topic btcirt_topic  --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
+        kafka-topics --create --topic usdtirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
+        kafka-topics --create --topic ethirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
+        kafka-topics --create --topic etcirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
+        kafka-topics --create --topic shibirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
         wait
 
   schema-registry:
@@ -63,3 +64,29 @@ services:
       KAFKA_TOPIC: "stock_data"
     ports:
       - "5000:5000"
+
+  stream-processing:
+    build:
+      context: ./services/stream-processing
+      dockerfile: Dockerfile
+    container_name: stream-processing
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKER: "kafka-broker:9092"
+    command: spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 /app/consumer.py
+
+  questdb:
+    image: questdb/questdb:latest
+    container_name: questdb
+    ports:
+      - "9000:9000"
+      - "8812:8812"
+    volumes:
+      - questdb-volume:/root/.questdb
+
+volumes:
+  zookeeper_data:
+  kafka_data:
+  schema_registry_data:
+  questdb-volume:
