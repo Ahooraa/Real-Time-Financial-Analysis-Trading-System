@@ -25,7 +25,8 @@ def compute_indicators_for_group(group_df: pd.DataFrame):
     gdf["SMA_5"] = gdf["close"].rolling(window=5).mean()
 
     # -- EMA(10) --
-    gdf["EMA_10"] = gdf["close"].ewm(span=10, adjust=False).mean()
+    gdf["EMA_10"] = gdf["close"].ewm(span=10, adjust=False, min_periods=10).mean()
+
 
     # -- RSI(10) --
     gdf["delta"] = gdf["close"].diff()
