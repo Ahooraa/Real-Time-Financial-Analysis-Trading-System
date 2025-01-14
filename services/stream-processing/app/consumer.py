@@ -6,21 +6,19 @@ import pandas as pd
 import json
 from kafka import KafkaProducer
 
-# -------------------------------------------------------------------
-# 1) Global DataFrame to store and accumulate all rows
-# -------------------------------------------------------------------
+# Keep track of which (symbol, local_time) we already sent
+already_sent = set()
+
+# (A) Global DataFrame to accumulate data
 global_data = pd.DataFrame(columns=[
     "stock_symbol", "local_time",
     "open", "high", "low", "close", "volume"
 ])
 
 # -------------------------------------------------------------------
-# 2) Define function to compute rolling indicators in Pandas
+# 1) Compute Indicators
 # -------------------------------------------------------------------
 def compute_indicators_for_group(group_df: pd.DataFrame):
-    """
-    Computes SMA(5), EMA(10), RSI(10) for each symbol's rows (row-based).
-    """
     gdf = group_df.copy()
 
     # -- SMA(5) --
@@ -35,40 +33,68 @@ def compute_indicators_for_group(group_df: pd.DataFrame):
     gdf["loss"] = -gdf["delta"].clip(upper=0)
     gdf["avg_gain_10"] = gdf["gain"].rolling(window=10).mean()
     gdf["avg_loss_10"] = gdf["loss"].rolling(window=10).mean()
-
-    # Avoid division by zero
+    # Avoid division by zero in RSI calculation
     gdf["rs"] = gdf["avg_gain_10"] / gdf["avg_loss_10"].replace({0: None})
     gdf["RSI_10"] = 100 - (100 / (1 + gdf["rs"]))
 
     return gdf
 
 # -------------------------------------------------------------------
-# 3) foreachBatch function
+# 2) Generate Signals (Scenario B)
+# -------------------------------------------------------------------
+def generate_signals_scenario_b(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Scenario B (Crossover-Driven Priority):
+      1) BUY if SMA(5) > EMA(10) and RSI_10 < 70
+      2) SELL if SMA(5) < EMA(10) and RSI_10 > 30
+      3) Otherwise, HOLD
+    """
+
+    def get_signal(row):
+        rsi = row["RSI_10"]
+        sma_5 = row["SMA_5"]
+        ema_10 = row["EMA_10"]
+
+        # If any indicator is NaN (especially at the beginning), default to HOLD
+        if pd.isnull(rsi) or pd.isnull(sma_5) or pd.isnull(ema_10):
+            return "HOLD"
+
+        if (sma_5 > ema_10) and (rsi < 70):
+            return "BUY"
+        elif (sma_5 < ema_10) and (rsi > 30):
+            return "SELL"
+        else:
+            return "HOLD"
+
+    df["signal"] = df.apply(get_signal, axis=1)
+    return df
+
+# -------------------------------------------------------------------
+# 3) foreachBatch Processing
 # -------------------------------------------------------------------
 def process_batch(batch_df, batch_id):
     print(f"\n=== Processing Micro-Batch: {batch_id} ===")
-
-    # Disable Arrow conversions to avoid 'iteritems' error in .toPandas()
+    # Disable Arrow conversions to avoid issues with row-by-row Pandas ops
     spark.conf.set("spark.sql.execution.arrow.pyspark.enabled", "false")
 
-    # 1) Convert local_time to string to avoid timestamp issues
+    # 1) Convert local_time => string
     batch_df = batch_df.selectExpr(
         "stock_symbol",
         "CAST(local_time AS STRING) AS local_time_str",
         "open", "high", "low", "close", "volume"
     )
 
-    # 2) Convert to Pandas
+    # 2) Convert Spark DF to Pandas
     pdf = batch_df.toPandas()
     if pdf.empty:
         print("No new data in this batch.")
         return
 
-    # 3) Convert local_time_str -> actual datetime
+    # 3) Convert local_time_str -> datetime
     pdf["local_time"] = pd.to_datetime(pdf["local_time_str"])
     pdf.drop(columns=["local_time_str"], inplace=True)
 
-    # 4) Accumulate data into global_data
+    # 4) Append new rows to global data
     global global_data
     global_data = pd.concat([global_data, pdf], ignore_index=True)
 
@@ -77,30 +103,40 @@ def process_batch(batch_df, batch_id):
     updated_pdf = global_data.groupby("stock_symbol", group_keys=False).apply(compute_indicators_for_group)
     updated_pdf.reset_index(drop=True, inplace=True)
 
-    # 6) Group by (stock_symbol, local_time), keep only the last row per group
-    #    so that for each minute (local_time), we only send 1 row per symbol
+    # 6) Generate signals (Scenario B)
+    updated_pdf = generate_signals_scenario_b(updated_pdf)
+
+    # 7) We only want the final row for each symbol/time
     latest_symbol_time = updated_pdf.groupby(
         ["stock_symbol", "local_time"], group_keys=False
     ).tail(1)
 
-    # 7) Convert these final rows to JSON
-    records = latest_symbol_time.to_dict(orient="records")
+    # 8) Filter out (symbol, local_time) combos we've already sent
+    new_records = []
+    for row_dict in latest_symbol_time.to_dict(orient="records"):
+        combo = (row_dict["stock_symbol"], row_dict["local_time"])
+        if combo not in already_sent:
+            new_records.append(row_dict)
+            already_sent.add(combo)
 
-    # 8) Produce them to Kafka using kafka-python
+    if not new_records:
+        print("No newly updated rows to send this batch.")
+        return
+
+    # 9) Send new records (including 'signal') to Kafka
     producer = KafkaProducer(
         bootstrap_servers=[kafka_broker],
         value_serializer=lambda v: json.dumps(v, default=str).encode("utf-8")
     )
 
-    count = 0
-    for row in records:
+    for row in new_records:
         producer.send(output_topic, row)
-        count += 1
 
     producer.flush()
     producer.close()
 
-    print(f"Sent {count} messages to Kafka topic: {output_topic}")
+    print(f"Sent {len(new_records)} new (symbol, local_time) combos to Kafka topic: {output_topic}")
+
 
 # -------------------------------------------------------------------
 # 4) Spark Setup
