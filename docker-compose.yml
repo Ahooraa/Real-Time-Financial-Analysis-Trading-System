@@ -58,12 +58,7 @@ services:
     depends_on:
       - kafka
     environment:
-      FLASK_HOST: "0.0.0.0"
-      FLASK_PORT: 5000
       KAFKA_BROKER: "kafka-broker:9092"
-      KAFKA_TOPIC: "stock_data"
-    ports:
-      - "5000:5000"
 
   stream-processing:
     build:
