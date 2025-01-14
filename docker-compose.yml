@@ -71,17 +71,30 @@ services:
       KAFKA_BROKER: "kafka-broker:9092"
     command: spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 /app/consumer.py
 
-  questdb:
-    image: questdb/questdb:latest
-    container_name: questdb
+  # questdb:
+  #   image: questdb/questdb:latest
+  #   container_name: questdb
+  #   ports:
+  #     - "9000:9000"
+  #     - "8812:8812"
+  #   volumes:
+  #     - questdb-volume:/root/.questdb
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
     ports:
-      - "9000:9000"
-      - "8812:8812"
+      - "5432:5432"
     volumes:
-      - questdb-volume:/root/.questdb
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   zookeeper_data:
   kafka_data:
   schema_registry_data:
-  questdb-volume:
+  # questdb-volume:
+  postgres_data:
