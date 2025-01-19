@@ -1,10 +1,28 @@
+import logging
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_json
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType
 
 import pandas as pd
 import json
+import math
 from kafka import KafkaProducer
+import psycopg2  # <-- for inserting into QuestDB
+
+# Configure logging
+# logging.basicConfig(level=logging.INFO)
+
+# Set log level for Kafka consumer to WARN to reduce verbosity
+spark = SparkSession.builder \
+    .appName("OneRowPerSymbolMinute") \
+    .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2") \
+    .config("spark.executor.extraJavaOptions", "-Dlog4j.configuration=log4j.properties") \
+    .config("spark.driver.extraJavaOptions", "-Dlog4j.configuration=log4j.properties") \
+    .getOrCreate()
+
+# Set Kafka consumer log level to WARN
+spark.sparkContext.setLogLevel("WARN")
+
 
 # Keep track of which (symbol, local_time) we already sent
 already_sent = set()
@@ -14,6 +32,74 @@ global_data = pd.DataFrame(columns=[
     "stock_symbol", "local_time",
     "open", "high", "low", "close", "volume"
 ])
+
+# -----------------------------------------------------------------------------
+# QuestDB Configuration
+# -----------------------------------------------------------------------------
+QUESTDB_HOST = "questdb"
+QUESTDB_PORT = 8812
+QUESTDB_DATABASE = "qdb"
+QUESTDB_USER = "admin"
+QUESTDB_PASSWORD = "quest"
+
+def insert_batch_to_questdb(records):
+    """
+    Insert the given list of record dicts into QuestDB's 'stock_data' table.
+    The table schema includes a 'signal' column, so each record should have it.
+    
+    Each dict in 'records' is expected to have these keys:
+      stock_symbol, local_time, open, high, low, close, volume,
+      SMA_5, EMA_10, delta, gain, loss, avg_gain_10, avg_loss_10,
+      rs, RSI_10, signal
+    """
+    if not records:
+        return  # nothing to insert
+
+    # Open connection to QuestDB
+    try:
+        conn = psycopg2.connect(
+            dbname=QUESTDB_DATABASE,
+            user=QUESTDB_USER,
+            password=QUESTDB_PASSWORD,
+            host=QUESTDB_HOST,
+            port=QUESTDB_PORT
+        )
+        logging.warning("Successfully connected to QuestDB.")
+    except Exception as e:
+        logging.error(f"Error connecting to QuestDB: {e}")
+        return
+
+    try:
+        query = """
+        INSERT INTO stock_data (
+            stock_symbol, local_time, open, high, low, close, volume,
+            SMA_5, EMA_10, delta, gain, loss, avg_gain_10, avg_loss_10,
+            rs, RSI_10, signal
+        )
+        VALUES (
+            %(stock_symbol)s, %(local_time)s, %(open)s, %(high)s, %(low)s,
+            %(close)s, %(volume)s, %(SMA_5)s, %(EMA_10)s, %(delta)s,
+            %(gain)s, %(loss)s, %(avg_gain_10)s, %(avg_loss_10)s,
+            %(rs)s, %(RSI_10)s, %(signal)s
+        );
+        """
+        with conn.cursor() as cur:
+            for record in records:
+                # Convert any float('nan') or string "NaN" to None to avoid insert errors
+                for k, v in record.items():
+                    if isinstance(v, float) and math.isnan(v):
+                        record[k] = None
+                    elif isinstance(v, str) and v.lower() == "nan":
+                        record[k] = None
+
+                cur.execute(query, record)
+        conn.commit()
+
+        logging.warning(f"Inserted {len(records)} new records into QuestDB.")
+    except Exception as e:
+        logging.error(f"Error inserting into QuestDB: {e}")
+    finally:
+        conn.close()
 
 # -------------------------------------------------------------------
 # 1) Compute Indicators
@@ -26,7 +112,6 @@ def compute_indicators_for_group(group_df: pd.DataFrame):
 
     # -- EMA(10) --
     gdf["EMA_10"] = gdf["close"].ewm(span=10, adjust=False, min_periods=10).mean()
-
 
     # -- RSI(10) --
     gdf["delta"] = gdf["close"].diff()
@@ -50,13 +135,12 @@ def generate_signals_scenario_b(df: pd.DataFrame) -> pd.DataFrame:
       2) SELL if SMA(5) < EMA(10) and RSI_10 > 30
       3) Otherwise, HOLD
     """
-
     def get_signal(row):
         rsi = row["RSI_10"]
         sma_5 = row["SMA_5"]
         ema_10 = row["EMA_10"]
 
-        # If any indicator is NaN (especially at the beginning), default to HOLD
+        # If any indicator is NaN, default to HOLD
         if pd.isnull(rsi) or pd.isnull(sma_5) or pd.isnull(ema_10):
             return "HOLD"
 
@@ -129,23 +213,18 @@ def process_batch(batch_df, batch_id):
         bootstrap_servers=[kafka_broker],
         value_serializer=lambda v: json.dumps(v, default=str).encode("utf-8")
     )
-
     for row in new_records:
         producer.send(output_topic, row)
-
     producer.flush()
     producer.close()
-
     print(f"Sent {len(new_records)} new (symbol, local_time) combos to Kafka topic: {output_topic}")
 
+    # 10) Insert new records to QuestDB
+    insert_batch_to_questdb(new_records)
 
 # -------------------------------------------------------------------
 # 4) Spark Setup
 # -------------------------------------------------------------------
-spark = SparkSession.builder \
-    .appName("OneRowPerSymbolMinute") \
-    .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2") \
-    .getOrCreate()
 
 # Kafka config
 kafka_broker = "kafka-broker:9092"

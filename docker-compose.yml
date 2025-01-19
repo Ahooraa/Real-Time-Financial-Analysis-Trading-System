@@ -71,30 +71,51 @@ services:
       KAFKA_BROKER: "kafka-broker:9092"
     command: spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 /app/consumer.py
 
-  # questdb:
-  #   image: questdb/questdb:latest
-  #   container_name: questdb
-  #   ports:
-  #     - "9000:9000"
-  #     - "8812:8812"
-  #   volumes:
-  #     - questdb-volume:/root/.questdb
-  postgres:
-    image: postgres:latest
-    container_name: postgres
-    environment:
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydatabase
+  questdb:
+    image: questdb/questdb:latest
+    container_name: questdb
     ports:
-      - "5432:5432"
+      - "9000:9000"  # HTTP / Web Console
+      - "8812:8812"  # Postgres wire
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - questdb-volume:/root/.questdb
+
+  questdb-init:
+    image: postgres:latest
+    depends_on:
+      - questdb
+    volumes:
+      # Adjusted to mount the init_questdb.sql from the "db" directory
+      - ./db/init_questdb.sql:/docker-entrypoint-initdb.d/init_questdb.sql:ro
+    environment:
+      PGPASSWORD: quest
+    command: >
+      bash -c "
+        echo 'Waiting for QuestDB to be ready...';
+        until pg_isready -h questdb -p 8812; do
+          sleep 1;
+        done;
+        echo 'QuestDB is up, running init script...';
+        psql -h questdb -p 8812 -U admin -d qdb -f /docker-entrypoint-initdb.d/init_questdb.sql;
+        echo 'Initialization script executed successfully.';
+      "
+
+  # postgres:
+  #   image: postgres:latest
+  #   container_name: postgres
+  #   environment:
+  #     POSTGRES_USER: myuser
+  #     POSTGRES_PASSWORD: mypassword
+  #     POSTGRES_DB: mydatabase
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   zookeeper_data:
   kafka_data:
   schema_registry_data:
-  # questdb-volume:
-  postgres_data:
+  questdb-volume:
+  # postgres_data:
