@@ -1,5 +1,4 @@
-DROP TABLE IF EXISTS stock_data;
-CREATE TABLE stock_data (
+CREATE TABLE IF not EXISTS stock_data (
     stock_symbol SYMBOL,  
     topic STRING,  
     signal STRING,    
