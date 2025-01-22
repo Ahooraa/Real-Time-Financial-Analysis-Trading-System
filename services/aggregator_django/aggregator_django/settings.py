@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'aggregator',
 ]
 
 MIDDLEWARE = [
@@ -74,11 +76,10 @@ WSGI_APPLICATION = 'aggregator_django.wsgi.application'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
     'default': {
+        'ENGINE': 'django.db.backends.dummy',  # No default DB
+    },
+    'questdb': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'qdb',
         'USER': 'admin',
@@ -112,12 +113,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'Asia/Tehran'  # Set to Asia/Tehran
 USE_I18N = True
-
-USE_TZ = True
+USE_L10N = True
+USE_TZ = True  # Ensure timezone-aware datetimes
 
 
 # Static files (CSS, JavaScript, Images)
