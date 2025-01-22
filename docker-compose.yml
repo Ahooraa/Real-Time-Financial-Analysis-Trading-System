@@ -99,6 +99,18 @@ services:
         psql -h questdb -p 8812 -U admin -d qdb -f /docker-entrypoint-initdb.d/init_questdb.sql;
         echo 'Initialization script executed successfully.';
       "
+  aggregator_django:
+    build:
+      context: ./services/aggregator_django
+    container_name: aggregator_django
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./services/aggregator_django:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - questdb
+    
 
   # postgres:
   #   image: postgres:latest
