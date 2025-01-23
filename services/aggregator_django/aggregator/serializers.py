@@ -17,3 +17,15 @@ class AggregationRequestSerializer(serializers.Serializer):
     stock_symbol = serializers.CharField(max_length=50)
     period = serializers.IntegerField(min_value=1)  # Period in minutes
     field = serializers.ChoiceField(choices=VALID_FIELDS)
+
+class StockSummaryRequestSerializer(serializers.Serializer):
+    stock_symbol = serializers.CharField(max_length=50)
+    period = serializers.IntegerField(min_value=1)  # Period in minutes
+
+class MultiStockSummaryRequestSerializer(serializers.Serializer):
+    stock_symbol = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        allow_empty=False,
+        help_text="List of stock symbols to summarize."
+    )
+    period = serializers.IntegerField(min_value=1, help_text="Period in minutes.")
