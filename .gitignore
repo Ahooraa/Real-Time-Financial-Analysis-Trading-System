@@ -1,2 +1,6 @@
 .venv/
+# Ignore Grafana runtime data
+data/grafana/
 
+# Ignore sensitive files (if any)
+grafana/provisioning/datasources/*.secret.yml
