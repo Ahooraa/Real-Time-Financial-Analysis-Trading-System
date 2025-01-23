@@ -1,0 +1,16 @@
+apiVersion: 1
+
+datasources:
+  - name: QuestDB
+    type: postgres
+    access: proxy
+    url: questdb:8812
+    database: qdb
+    user: admin
+    password: quest
+    jsonData:
+      tlsSkipVerify: true
+      queryTimeout: 60
+      sslmode: 'disable'
+    secureJsonData:
+      password: quest

@@ -1,6 +1,5 @@
 CREATE TABLE IF not EXISTS stock_data (
-    stock_symbol SYMBOL,  
-    topic STRING,  
+    stock_symbol SYMBOL,   
     signal STRING,    
     local_time TIMESTAMP, 
     open DOUBLE,          
