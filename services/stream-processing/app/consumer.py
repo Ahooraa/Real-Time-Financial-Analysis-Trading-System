@@ -205,7 +205,7 @@ def process_batch(batch_df, batch_id):
             already_sent.add(combo)
 
     if not new_records:
-        print("No newly updated rows to send this batch.")
+        logging.warning("No newly updated rows to send this batch.")
         return
 
     # 9) Send new records (including 'signal') to Kafka
@@ -217,10 +217,10 @@ def process_batch(batch_df, batch_id):
         producer.send(output_topic, row)
     producer.flush()
     producer.close()
-    print(f"Sent {len(new_records)} new (symbol, local_time) combos to Kafka topic: {output_topic}")
+    logging.warning(f"Sent {len(new_records)} new (symbol, local_time) combos to Kafka topic: {output_topic}")
 
     # 10) Insert new records to QuestDB
-    insert_batch_to_questdb(new_records)
+    # insert_batch_to_questdb(new_records)
 
 # -------------------------------------------------------------------
 # 4) Spark Setup

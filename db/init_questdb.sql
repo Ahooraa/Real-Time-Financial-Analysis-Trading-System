@@ -1,4 +1,5 @@
-CREATE TABLE IF not EXISTS stock_data (
+DROP TABLE IF EXISTS stock_data;
+CREATE TABLE stock_data (
     stock_symbol SYMBOL,   
     signal STRING,    
     local_time TIMESTAMP, 
@@ -6,7 +7,7 @@ CREATE TABLE IF not EXISTS stock_data (
     close DOUBLE,        
     high DOUBLE,          
     low DOUBLE,           
-    volume LONG,          
+    volume DOUBLE,          
     SMA_5 DOUBLE,         
     EMA_10 DOUBLE,        
     delta DOUBLE,

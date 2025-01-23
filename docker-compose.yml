@@ -143,6 +143,22 @@ services:
     networks:
       - questdb
 
+  kafka-to-questdb:
+    build:
+      context: ./services/kafka-to-questdb
+      dockerfile: Dockerfile
+    container_name: kafka-to-questdb
+    depends_on:
+      - kafka
+      - questdb
+    environment:
+      KAFKA_BROKER: "kafka-broker:9092"
+      QUESTDB_HOST: "questdb"
+      QUESTDB_ILP_PORT: 9009
+    networks:
+      - questdb
+
+
 volumes:
   questdb-volume:
 
