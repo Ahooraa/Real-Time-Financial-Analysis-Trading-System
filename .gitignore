@@ -4,3 +4,5 @@ data/grafana/
 
 # Ignore sensitive files (if any)
 grafana/provisioning/datasources/*.secret.yml
+
+# Ensure no tracked files in data/grafana/
