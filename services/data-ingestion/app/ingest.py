@@ -21,7 +21,7 @@ producer = KafkaProducer(
 )
 
 # API URL
-API_URL = os.getenv("API_URL", "https://api.nobitex.ir/market/udf/history")
+API_URL = "https://api.nobitex.ir/market/udf/history"
 
 # List of stock symbols to fetch data for
 symbols = ["BTCIRT", "USDTIRT", "ETHIRT", "ETCIRT", "SHIBIRT"]

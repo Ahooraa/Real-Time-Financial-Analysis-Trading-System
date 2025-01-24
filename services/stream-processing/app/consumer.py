@@ -2,7 +2,7 @@ import logging
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_json
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, TimestampType
-
+import os
 import pandas as pd
 import json
 import math
@@ -11,6 +11,17 @@ import psycopg2  # <-- for inserting into QuestDB
 
 # Configure logging
 # logging.basicConfig(level=logging.INFO)
+
+# QuestDB Configuration
+QUESTDB_HOST = os.getenv("QUESTDB_HOST", "questdb")
+QUESTDB_PORT = os.getenv("QUESTDB_PORT", 8812)
+QUESTDB_DATABASE = os.getenv("QUESTDB_DB", "qdb")
+QUESTDB_USER = os.getenv("QUESTDB_USER", "admin")
+QUESTDB_PASSWORD = os.getenv("QUESTDB_PASSWORD")
+# Kafka config
+kafka_broker = os.getenv("KAFKA_BROKER")
+input_topics = "btcirt_topic,usdtirt_topic,ethirt_topic,etcirt_topic,shibirt_topic"
+output_topic = os.getenv("KAFA_TOPIC_OUTPUT","output_topic")
 
 # Set log level for Kafka consumer to WARN to reduce verbosity
 spark = SparkSession.builder \
@@ -33,14 +44,6 @@ global_data = pd.DataFrame(columns=[
     "open", "high", "low", "close", "volume"
 ])
 
-# -----------------------------------------------------------------------------
-# QuestDB Configuration
-# -----------------------------------------------------------------------------
-QUESTDB_HOST = "questdb"
-QUESTDB_PORT = 8812
-QUESTDB_DATABASE = "qdb"
-QUESTDB_USER = "admin"
-QUESTDB_PASSWORD = "quest"
 
 def insert_batch_to_questdb(records):
     """
@@ -226,10 +229,7 @@ def process_batch(batch_df, batch_id):
 # 4) Spark Setup
 # -------------------------------------------------------------------
 
-# Kafka config
-kafka_broker = "kafka-broker:9092"
-input_topics = "btcirt_topic,usdtirt_topic,ethirt_topic,etcirt_topic,shibirt_topic"
-output_topic = "output_topic"
+
 
 # Define schema for incoming JSON
 schema = StructType([
