@@ -1,5 +1,4 @@
-DROP TABLE IF EXISTS stock_data;
-CREATE TABLE stock_data (
+CREATE TABLE IF NOT EXISTS stock_data (
     stock_symbol SYMBOL,   
     signal STRING,    
     local_time TIMESTAMP, 
