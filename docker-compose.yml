@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -9,6 +11,8 @@ services:
       - "2181:2181"
     networks:
       - questdb
+    env_file:
+      - .env
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -19,9 +23,9 @@ services:
       - "9092:9092"
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_ZOOKEEPER_CONNECT: ${ZOOKEEPER_CONNECT}
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${KAFKA_BROKER}
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     command:
@@ -32,7 +36,7 @@ services:
         while ! nc -z kafka-broker 9092; do
           sleep 1;
         done;
-        kafka-topics --create --topic btcirt_topic  --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
+        kafka-topics --create --topic btcirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
         kafka-topics --create --topic usdtirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
         kafka-topics --create --topic ethirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
         kafka-topics --create --topic etcirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
@@ -40,6 +44,8 @@ services:
         wait
     networks:
       - questdb
+    env_file:
+      - .env
 
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
@@ -50,11 +56,13 @@ services:
       - "8081:8081"
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: "zookeeper:2181"
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: ${ZOOKEEPER_CONNECT}
       SCHEMA_REGISTRY_LISTENERS: "http://schema-registry:8081"
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://kafka-broker:9092"
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://${KAFKA_BROKER}
     networks:
       - questdb
+    env_file:
+      - .env
 
   data-ingestion:
     build:
@@ -63,10 +71,10 @@ services:
     container_name: data-ingestion
     depends_on:
       - kafka
-    environment:
-      KAFKA_BROKER: "kafka-broker:9092"
     networks:
       - questdb
+    env_file:
+      - .env
 
   stream-processing:
     build:
@@ -76,10 +84,12 @@ services:
     depends_on:
       - kafka
     environment:
-      KAFKA_BROKER: "kafka-broker:9092"
+      KAFKA_BROKER: ${KAFKA_BROKER}
     command: spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 /app/consumer.py
     networks:
       - questdb
+    env_file:
+      - .env
 
   questdb:
     image: questdb/questdb:latest
@@ -91,6 +101,8 @@ services:
       - questdb-volume:/root/.questdb
     networks:
       - questdb
+    env_file:
+      - .env
 
   questdb-init:
     image: postgres:latest
@@ -112,6 +124,8 @@ services:
       "
     networks:
       - questdb
+    env_file:
+      - .env
 
   grafana:
     image: grafana/grafana
@@ -122,12 +136,12 @@ services:
     volumes:
       - ./data/grafana:/var/lib/grafana/
       - ./grafana/provisioning/:/etc/grafana/provisioning/
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin  # Set a default admin password
     depends_on:
       - questdb
     networks:
       - questdb
+    env_file:
+      - .env
 
   aggregator_django:
     build:
@@ -142,6 +156,8 @@ services:
       - questdb
     networks:
       - questdb
+    env_file:
+      - .env
 
   kafka-to-questdb:
     build:
@@ -152,12 +168,13 @@ services:
       - kafka
       - questdb
     environment:
-      KAFKA_BROKER: "kafka-broker:9092"
+      KAFKA_BROKER: ${KAFKA_BROKER}
       QUESTDB_HOST: "questdb"
       QUESTDB_ILP_PORT: 9009
     networks:
       - questdb
-
+    env_file:
+      - .env
 
 volumes:
   questdb-volume:

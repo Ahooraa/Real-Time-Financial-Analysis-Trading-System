@@ -17,5 +17,8 @@ RUN chmod +x /wait-for-it.sh
 # Expose the Flask port
 EXPOSE 5000
 
-# Run the application with wait-for-it
-CMD ["/wait-for-it.sh", "kafka-broker:9092", "--", "python", "./app/ingest.py"]
+# Set environment variable for Kafka broker
+ENV KAFKA_BROKER=kafka:9092
+
+# Run the application with wait-for-it (using shell form)
+CMD /wait-for-it.sh ${KAFKA_BROKER} -- python ./app/ingest.py

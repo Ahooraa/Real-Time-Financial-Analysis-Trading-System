@@ -5,11 +5,11 @@ import logging
 from datetime import datetime
 import pytz
 from kafka import KafkaProducer
-
+import os
 logging.basicConfig(level=logging.INFO)
 
 # Kafka configuration
-KAFKA_BROKER = "kafka-broker:9092"
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
 LOCAL_TIMEZONE = pytz.timezone('Asia/Tehran')  # Example: 'Asia/Tehran' for Iran
 
 # Initialize Kafka producer
@@ -21,7 +21,7 @@ producer = KafkaProducer(
 )
 
 # API URL
-API_URL = "https://api.nobitex.ir/market/udf/history"
+API_URL = os.getenv("API_URL", "https://api.nobitex.ir/market/udf/history")
 
 # List of stock symbols to fetch data for
 symbols = ["BTCIRT", "USDTIRT", "ETHIRT", "ETCIRT", "SHIBIRT"]
