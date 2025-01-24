@@ -4,13 +4,13 @@ datasources:
   - name: QuestDB
     type: postgres
     access: proxy
-    url: questdb:8812
-    database: qdb
-    user: admin
-    password: quest
+    url: ${QUESTDB_HOST}:${QUESTDB_PORT}
+    database: ${QUESTDB_DB}
+    user: ${QUESTDB_USER}
+    password: ${QUESTDB_PASSWORD}
     jsonData:
       tlsSkipVerify: true
       queryTimeout: 60
       sslmode: 'disable'
     secureJsonData:
-      password: quest
+      password: ${QUESTDB_PASSWORD}
