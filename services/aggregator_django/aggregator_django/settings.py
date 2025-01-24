@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -81,11 +82,11 @@ DATABASES = {
     },
     'questdb': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'qdb',
-        'USER': 'admin',
-        'PASSWORD': 'quest',
-        'HOST': 'questdb',
-        'PORT': '8812',
+        'NAME': os.getenv("QUESTDB_DB"),
+        'USER': os.getenv("QUESTDB_USER"),
+        'PASSWORD': os.getenv("QUESTDB_PASSWORD"),
+        'HOST': os.getenv("QUESTDB_HOST"),
+        'PORT': os.getenv("QUESTDB_PORT"),
     }
 }
 
@@ -113,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Asia/Tehran'  # Set to Asia/Tehran
+TIME_ZONE = os.getenv("TZ")  # Set to Asia/Tehran
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True  # Ensure timezone-aware datetimes

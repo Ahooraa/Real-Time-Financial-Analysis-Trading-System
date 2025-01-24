@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 
 # Kafka configuration
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
-LOCAL_TIMEZONE = pytz.timezone('Asia/Tehran')  # Example: 'Asia/Tehran' for Iran
+LOCAL_TIMEZONE = pytz.timezone(os.getenv("TZ"))  # Example: 'Asia/Tehran' for Iran
 
 # Initialize Kafka producer
 producer = KafkaProducer(
