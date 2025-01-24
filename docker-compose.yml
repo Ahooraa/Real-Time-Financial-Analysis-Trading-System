@@ -47,22 +47,22 @@ services:
     env_file:
       - .env
 
-  schema-registry:
-    image: confluentinc/cp-schema-registry:latest
-    container_name: schema-registry
-    depends_on:
-      - kafka
-    ports:
-      - "8081:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
-      SCHEMA_REGISTRY_LISTENERS: "http://schema-registry:8081"
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://${KAFKA_CONTAINER_NAME}:9092
-    networks:
-      - questdb
-    env_file:
-      - .env
+  # schema-registry:
+  #   image: confluentinc/cp-schema-registry:latest
+  #   container_name: schema-registry
+  #   depends_on:
+  #     - kafka
+  #   ports:
+  #     - "8081:8081"
+  #   environment:
+  #     SCHEMA_REGISTRY_HOST_NAME: schema-registry
+  #     SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+  #     SCHEMA_REGISTRY_LISTENERS: "http://schema-registry:8081"
+  #     SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://${KAFKA_CONTAINER_NAME}:9092
+  #   networks:
+  #     - questdb
+  #   env_file:
+  #     - .env
 
   data-ingestion:
     build:
@@ -115,11 +115,11 @@ services:
     command: >
       bash -c "
         echo 'Waiting for QuestDB to be ready...';
-        until pg_isready -h ${QUESTDB_HOST} -p 8812; do
+        until pg_isready -h ${QUESTDB_HOST} -p ${QUESTDB_PORT}; do
           sleep 1;
         done;
         echo 'QuestDB is up, running init script...';
-        psql -h ${QUESTDB_HOST} -p 8812 -U admin -d qdb -f /docker-entrypoint-initdb.d/init_questdb.sql;
+        psql -h ${QUESTDB_HOST} -p ${QUESTDB_PORT} -U admin -d ${QUESTDB_DB} -f /docker-entrypoint-initdb.d/init_questdb.sql;
         echo 'Initialization script executed successfully.';
       "
     networks:
