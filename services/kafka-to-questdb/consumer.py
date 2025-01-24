@@ -6,12 +6,12 @@ import logging
 import time
 import json
 import math
-
+import os
 # Configuration
-KAFKA_BROKER = "kafka-broker:9092"
-OUTPUT_TOPIC = "output_topic"
-QUESTDB_HOST = "questdb"
-QUESTDB_ILP_PORT = 9009
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
+OUTPUT_TOPIC = os.getenv("KAFKA_TOPIC_OUTPUT", "output_topic")
+QUESTDB_HOST = os.getenv("QUESTDB_HOST", "questdb")
+QUESTDB_ILP_PORT = os.getenv("QUESTDB_ILP_PORT",9009)
 logging.basicConfig(level=logging.INFO)
 
 # Function to send data to QuestDB via ILP
