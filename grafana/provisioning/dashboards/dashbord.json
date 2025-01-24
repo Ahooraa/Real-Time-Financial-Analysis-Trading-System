@@ -712,7 +712,7 @@
             "editorMode": "code",
             "format": "time_series",
             "rawQuery": true,
-            "rawSql": "SELECT\r\n    local_time AS \"time\", open, close, high, low, volume, SMA_5\r\nFROM\r\n    stock_data\r\nWHERE\r\n    $__timeFilter(local_time) AND\r\n    stock_symbol = 'BTCIRT'\r\nORDER BY\r\n    local_time;",
+            "rawSql": "SELECT\r\n    local_time AS \"time\", open, close, high, low, volume, SMA_5, EMA_10\r\nFROM\r\n    stock_data\r\nWHERE\r\n    $__timeFilter(local_time) AND\r\n    stock_symbol = 'BTCIRT' AND SMA_5 > 0 AND EMA_10 > 0\r\nORDER BY\r\n    local_time;",
             "refId": "A",
             "sql": {
               "columns": [
@@ -745,13 +745,13 @@
       "list": []
     },
     "time": {
-      "from": "2025-01-24T12:16:41.479Z",
-      "to": "2025-01-24T12:25:02.952Z"
+      "from": "2025-01-24T15:54:03.001Z",
+      "to": "2025-01-24T17:43:10.857Z"
     },
     "timepicker": {},
     "timezone": "browser",
     "title": "Stock analytics",
     "uid": "beay2070jcd1ca",
-    "version": 12,
+    "version": 15,
     "weekStart": ""
   }
