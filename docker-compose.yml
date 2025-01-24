@@ -7,6 +7,8 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    networks:
+      - questdb
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -36,6 +38,8 @@ services:
         kafka-topics --create --topic etcirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
         kafka-topics --create --topic shibirt_topic --replication-factor 1 --if-not-exists --bootstrap-server kafka-broker:9092;
         wait
+    networks:
+      - questdb
 
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
@@ -49,6 +53,8 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: "zookeeper:2181"
       SCHEMA_REGISTRY_LISTENERS: "http://schema-registry:8081"
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: "PLAINTEXT://kafka-broker:9092"
+    networks:
+      - questdb
 
   data-ingestion:
     build:
@@ -59,6 +65,8 @@ services:
       - kafka
     environment:
       KAFKA_BROKER: "kafka-broker:9092"
+    networks:
+      - questdb
 
   stream-processing:
     build:
@@ -70,6 +78,8 @@ services:
     environment:
       KAFKA_BROKER: "kafka-broker:9092"
     command: spark-submit --master local[*] --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2 /app/consumer.py
+    networks:
+      - questdb
 
   questdb:
     image: questdb/questdb:latest
@@ -79,13 +89,14 @@ services:
       - "8812:8812"  # Postgres wire
     volumes:
       - questdb-volume:/root/.questdb
+    networks:
+      - questdb
 
   questdb-init:
     image: postgres:latest
     depends_on:
       - questdb
     volumes:
-      # Adjusted to mount the init_questdb.sql from the "db" directory
       - ./db/init_questdb.sql:/docker-entrypoint-initdb.d/init_questdb.sql:ro
     environment:
       PGPASSWORD: quest
@@ -99,6 +110,25 @@ services:
         psql -h questdb -p 8812 -U admin -d qdb -f /docker-entrypoint-initdb.d/init_questdb.sql;
         echo 'Initialization script executed successfully.';
       "
+    networks:
+      - questdb
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: always
+    ports:
+      - 3000:3000
+    volumes:
+      - ./data/grafana:/var/lib/grafana/
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin  # Set a default admin password
+    depends_on:
+      - questdb
+    networks:
+      - questdb
+
   aggregator_django:
     build:
       context: ./services/aggregator_django
@@ -110,24 +140,28 @@ services:
       - "8000:8000"
     depends_on:
       - questdb
-    
+    networks:
+      - questdb
 
-  # postgres:
-  #   image: postgres:latest
-  #   container_name: postgres
-  #   environment:
-  #     POSTGRES_USER: myuser
-  #     POSTGRES_PASSWORD: mypassword
-  #     POSTGRES_DB: mydatabase
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #     - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+  kafka-to-questdb:
+    build:
+      context: ./services/kafka-to-questdb
+      dockerfile: Dockerfile
+    container_name: kafka-to-questdb
+    depends_on:
+      - kafka
+      - questdb
+    environment:
+      KAFKA_BROKER: "kafka-broker:9092"
+      QUESTDB_HOST: "questdb"
+      QUESTDB_ILP_PORT: 9009
+    networks:
+      - questdb
+
 
 volumes:
-  zookeeper_data:
-  kafka_data:
-  schema_registry_data:
   questdb-volume:
-  # postgres_data:
+
+networks:
+  questdb:
+    name: questdb
