@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+        - name: grafana-datasource
+          mountPath: /etc/grafana/provisioning/datasources/questdb.yml
+          subPath: questdb.yml
+        - name: grafana-dashboard-config
+          mountPath: /etc/grafana/provisioning/dashboards/provisioning.yaml
+          subPath: provisioning.yaml
+        - name: grafana-dashboard-data
+          mountPath: /etc/grafana/provisioning/dashboards/dashboard.json
+          subPath: dashboard.json
+      volumes:
+      - name: grafana-datasource
+        configMap:
+          name: grafana-datasource
+      - name: grafana-dashboard-config
+        configMap:
+          name: grafana-dashboard
+      - name: grafana-dashboard-data
+        configMap:
+          name: grafana-dashboard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-service
+spec:
+  type: NodePort
+  selector:
+    app: grafana
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+    nodePort: 30300  # Accessible via Minikube IP:30300
