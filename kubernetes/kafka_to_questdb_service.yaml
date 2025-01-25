@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka-consumer
+spec:
+  containers:
+  - name: consumer
+    image: kafka-consumer:latest  # Must match your built image name
+    imagePullPolicy: Never  # For local Minikube images
+    env:
+    - name: PYTHONUNBUFFERED
+      value: "1"

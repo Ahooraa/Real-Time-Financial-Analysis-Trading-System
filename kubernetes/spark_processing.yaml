@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: spark-consumer
+spec:
+  containers:
+  - name: spark-consumer
+    image: spark-consumer
+    imagePullPolicy: Never  # Use local image in Minikube
+    env:
+    - name: PYTHONUNBUFFERED
+      value: "1"
+    # Add Kafka broker address as env variable if needed
+    - name: KAFKA_BROKER
+      value: "kafka:9092"
+  restartPolicy: Never

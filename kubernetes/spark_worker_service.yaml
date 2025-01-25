@@ -3,7 +3,7 @@ apiVersion: apps/v1
 metadata:
   name: spark-worker
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       component: spark-worker
@@ -21,4 +21,8 @@ spec:
             - containerPort: 8081
           resources:
             requests:
-              cpu: 100m
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"

@@ -8,9 +8,9 @@ import json
 import math
 
 # Configuration
-KAFKA_BROKER = "kafka-broker:9092"
+KAFKA_BROKER = "kafka:9092"
 OUTPUT_TOPIC = "output_topic"
-QUESTDB_HOST = "questdb"
+QUESTDB_HOST = "questdb-service"
 QUESTDB_ILP_PORT = 9009
 logging.basicConfig(level=logging.INFO)
 

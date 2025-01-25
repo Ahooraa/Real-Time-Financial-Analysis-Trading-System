@@ -227,7 +227,7 @@ def process_batch(batch_df, batch_id):
 # -------------------------------------------------------------------
 
 # Kafka config
-kafka_broker = "kafka-broker:9092"
+kafka_broker = "kafka:9092"
 input_topics = "btcirt_topic,usdtirt_topic,ethirt_topic,etcirt_topic,shibirt_topic"
 output_topic = "output_topic"
 
